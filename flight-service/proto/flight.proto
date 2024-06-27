@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package flight;
+option go_package = "github.com/deadshvt/flight-service/proto";
+
+service FlightService {
+  rpc GetFlightsWithAirports(GetFlightsWithAirportsRequest) returns (GetFlightsWithAirportsResponse);
+  rpc GetFlightWithAirports(GetFlightWithAirportsRequest) returns (GetFlightWithAirportsResponse);
+  rpc CreateFlight(CreateFlightRequest) returns (CreateFlightResponse);
+  rpc CreateAirport(CreateAirportRequest) returns (CreateAirportResponse);
+}
+
+message GetFlightsWithAirportsRequest {
+  int32 page = 1;
+  int32 size = 2;
+}
+
+message GetFlightsWithAirportsResponse {
+  int32 page = 1;
+  int32 pageSize = 2;
+  int32 totalElements = 3;
+  repeated FlightWithAirports items = 4;
+}
+
+message GetFlightWithAirportsRequest {
+  string flightNumber = 1;
+}
+
+message GetFlightWithAirportsResponse {
+  FlightWithAirports flight = 1;
+}
+
+message FlightWithAirports {
+  string flightNumber = 1;
+  string fromAirport = 2;
+  string toAirport = 3;
+  string date = 4;
+  int32 price = 5;
+}
+
+message CreateFlightRequest {
+    Flight flight = 1;
+}
+
+message CreateFlightResponse {}
+
+message Flight {
+  int32 ID = 1;
+  string flightNumber = 2;
+  int32 fromAirportID = 3;
+  int32 toAirportID = 4;
+  string date = 5;
+  int32 price = 6;
+}
+
+message CreateAirportRequest {
+    Airport airport = 1;
+}
+
+message CreateAirportResponse {}
+
+message Airport {
+  int32 ID = 1;
+  string name = 2;
+  string city = 3;
+  string country = 4;
+}

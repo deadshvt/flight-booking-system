@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package ticket;
+option go_package = "github.com/deadshvt/ticket-service/proto";
+
+service TicketService {
+  rpc GetTickets(GetTicketsRequest) returns (GetTicketsResponse);
+  rpc GetTicket(GetTicketRequest) returns (GetTicketResponse);
+  rpc PurchaseTicket(PurchaseTicketRequest) returns (PurchaseTicketResponse);
+  rpc ReturnTicket(ReturnTicketRequest) returns (ReturnTicketResponse);
+}
+
+message GetTicketsRequest {
+  string username = 1;
+}
+
+message GetTicketsResponse {
+  repeated Ticket tickets = 1;
+}
+
+message GetTicketRequest {
+  string username = 1;
+  string ticketUid = 2;
+}
+
+message GetTicketResponse {
+  Ticket ticket = 1;
+}
+
+message Ticket {
+  int32 ID = 1;
+  string ticketUid = 2;
+  string username = 3;
+  string flightNumber = 4;
+  int32 price = 5;
+  string status = 6;
+}
+
+message PurchaseTicketRequest {
+  string username = 1;
+  string flightNumber = 2;
+  int32 price = 3;
+}
+
+message PurchaseTicketResponse {
+  string ticketUid = 1;
+}
+
+message ReturnTicketRequest {
+  string username = 1;
+  string ticketUid = 2;
+}
+
+message ReturnTicketResponse {}

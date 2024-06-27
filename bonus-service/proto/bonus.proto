@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package bonus;
+option go_package = "github.com/deadshvt/bonus-service/proto";
+
+service BonusService {
+  rpc GetPrivilegeWithHistory(GetPrivilegeWithHistoryRequest) returns (GetPrivilegeWithHistoryResponse);
+  rpc GetPrivilege(GetPrivilegeRequest) returns (GetPrivilegeResponse);
+  rpc CreatePrivilege(CreatePrivilegeRequest) returns (CreatePrivilegeResponse);
+  rpc UpdatePrivilege(UpdatePrivilegeRequest) returns (UpdatePrivilegeResponse);
+  rpc CreateHistory(CreateHistoryRequest) returns (CreateHistoryResponse);
+}
+
+message GetPrivilegeWithHistoryRequest {
+  string username = 1;
+}
+
+message GetPrivilegeWithHistoryResponse {
+  Privilege privilege = 1;
+  repeated History history = 2;
+}
+
+message Privilege {
+  int32 ID = 1;
+  string username = 2;
+  int32 balance = 3;
+  string status = 4;
+}
+
+message History {
+  int32 ID = 1;
+  int32 privilegeID = 2;
+  string ticketUid = 3;
+  string date = 4;
+  int32 balanceDiff = 5;
+  string operationType = 6;
+}
+
+message GetPrivilegeRequest {
+  string username = 1;
+}
+
+message GetPrivilegeResponse {
+    Privilege privilege = 1;
+}
+
+message CreatePrivilegeRequest {
+    Privilege privilege = 1;
+}
+
+message CreatePrivilegeResponse {}
+
+message UpdatePrivilegeRequest {
+  Privilege privilege = 1;
+}
+
+message UpdatePrivilegeResponse {}
+
+message CreateHistoryRequest {
+    History history = 1;
+}
+
+message CreateHistoryResponse {}
