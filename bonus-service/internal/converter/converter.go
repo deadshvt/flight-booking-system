@@ -3,6 +3,8 @@ package converter
 import (
 	"github.com/deadshvt/flight-booking-system/bonus-service/internal/entity"
 	pb "github.com/deadshvt/flight-booking-system/bonus-service/proto"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func PrivilegeFromEntityToProto(privilege *entity.Privilege) *pb.Privilege {
@@ -23,24 +25,24 @@ func PrivilegeFromProtoToEntity(privilege *pb.Privilege) *entity.Privilege {
 	}
 }
 
-func HistoryFromEntityToProto(history *entity.History) *pb.History {
-	return &pb.History{
-		ID:            history.ID,
-		PrivilegeID:   history.PrivilegeID,
-		Date:          history.Date,
-		TicketUid:     history.TicketUid,
-		BalanceDiff:   history.BalanceDiff,
-		OperationType: history.OperationType,
+func OperationFromEntityToProto(operation *entity.Operation) *pb.Operation {
+	return &pb.Operation{
+		ID:            operation.ID,
+		PrivilegeID:   operation.PrivilegeID,
+		TicketUid:     operation.TicketUid,
+		Date:          timestamppb.New(operation.Date),
+		BalanceDiff:   operation.BalanceDiff,
+		OperationType: operation.OperationType,
 	}
 }
 
-func HistoryFromProtoToEntity(history *pb.History) *entity.History {
-	return &entity.History{
-		ID:            history.ID,
-		PrivilegeID:   history.PrivilegeID,
-		Date:          history.Date,
-		TicketUid:     history.TicketUid,
-		BalanceDiff:   history.BalanceDiff,
-		OperationType: history.OperationType,
+func OperationFromProtoToEntity(operation *pb.Operation) *entity.Operation {
+	return &entity.Operation{
+		ID:            operation.ID,
+		PrivilegeID:   operation.PrivilegeID,
+		TicketUid:     operation.TicketUid,
+		Date:          operation.Date.AsTime(),
+		BalanceDiff:   operation.BalanceDiff,
+		OperationType: operation.OperationType,
 	}
 }

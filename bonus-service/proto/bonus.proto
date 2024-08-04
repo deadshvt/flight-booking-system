@@ -3,12 +3,14 @@ syntax = "proto3";
 package bonus;
 option go_package = "github.com/deadshvt/bonus-service/proto";
 
+import "google/protobuf/timestamp.proto";
+
 service BonusService {
   rpc GetPrivilegeWithHistory(GetPrivilegeWithHistoryRequest) returns (GetPrivilegeWithHistoryResponse);
   rpc GetPrivilege(GetPrivilegeRequest) returns (GetPrivilegeResponse);
   rpc CreatePrivilege(CreatePrivilegeRequest) returns (CreatePrivilegeResponse);
   rpc UpdatePrivilege(UpdatePrivilegeRequest) returns (UpdatePrivilegeResponse);
-  rpc CreateHistory(CreateHistoryRequest) returns (CreateHistoryResponse);
+  rpc CreateOperation(CreateOperationRequest) returns (CreateOperationResponse);
 }
 
 message GetPrivilegeWithHistoryRequest {
@@ -17,7 +19,7 @@ message GetPrivilegeWithHistoryRequest {
 
 message GetPrivilegeWithHistoryResponse {
   Privilege privilege = 1;
-  repeated History history = 2;
+  repeated Operation history = 2;
 }
 
 message Privilege {
@@ -27,11 +29,11 @@ message Privilege {
   string status = 4;
 }
 
-message History {
+message Operation {
   int32 ID = 1;
   int32 privilegeID = 2;
   string ticketUid = 3;
-  string date = 4;
+  google.protobuf.Timestamp date = 4;
   int32 balanceDiff = 5;
   string operationType = 6;
 }
@@ -56,8 +58,8 @@ message UpdatePrivilegeRequest {
 
 message UpdatePrivilegeResponse {}
 
-message CreateHistoryRequest {
-    History history = 1;
+message CreateOperationRequest {
+    Operation operation = 1;
 }
 
-message CreateHistoryResponse {}
+message CreateOperationResponse {}

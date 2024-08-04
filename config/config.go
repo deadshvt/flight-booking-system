@@ -5,7 +5,8 @@ import (
 )
 
 func Load(path string) {
-	if err := godotenv.Load(path); err != nil {
+	err := godotenv.Load(path)
+	if err != nil {
 		panic(err)
 	}
 }

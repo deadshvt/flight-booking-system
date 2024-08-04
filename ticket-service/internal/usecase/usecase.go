@@ -3,9 +3,9 @@ package usecase
 import (
 	"context"
 
-	"github.com/deadshvt/flight-booking-system/ticket-service/internal/converter"
+	"github.com/deadshvt/flight-booking-system/ticket-service/internal/entity"
 	"github.com/deadshvt/flight-booking-system/ticket-service/internal/repository"
-	ticketpb "github.com/deadshvt/flight-booking-system/ticket-service/proto"
+	"github.com/deadshvt/flight-booking-system/ticket-service/pkg/errs"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -17,48 +17,64 @@ const (
 )
 
 type TicketUsecase struct {
-	Repo   repository.TicketRepository
+	Repo   *repository.TicketRepository
 	Logger zerolog.Logger
 }
 
-func NewTicketUsecase(repo repository.TicketRepository, logger zerolog.Logger) *TicketUsecase {
+func NewTicketUsecase(repo *repository.TicketRepository, logger zerolog.Logger) *TicketUsecase {
 	return &TicketUsecase{
 		Repo:   repo,
 		Logger: logger,
 	}
 }
 
+func (u *TicketUsecase) GetTicket(ctx context.Context,
+	username string, ticketUid string) (*entity.Ticket, error) {
+	u.Logger.Info().Msg("Getting ticket...")
+
+	ticket, err := u.Repo.GetTicket(ctx, username, ticketUid)
+	if err != nil {
+		u.Logger.Err(err).Msg("Failed to get ticket")
+		return nil, err
+	}
+
+	if ticket.Username != username {
+		u.Logger.Error().Msg("Ticket does not belong to user")
+		return nil, errs.ErrTicketDoesNotBelongToUser
+	}
+
+	return ticket, nil
+}
+
 func (u *TicketUsecase) PurchaseTicket(ctx context.Context,
-	req *ticketpb.PurchaseTicketRequest) (*ticketpb.PurchaseTicketResponse, error) {
+	username string, flightNumber string, price int32) (string, error) {
 	u.Logger.Info().Msg("Purchasing ticket...")
 
 	ticketUid := uuid.New().String()
 
-	protoTicket := &ticketpb.Ticket{
-		Username:     req.Username,
+	err := u.Repo.CreateTicket(ctx, &entity.Ticket{
+		Username:     username,
 		TicketUid:    ticketUid,
-		FlightNumber: req.FlightNumber,
-		Price:        req.Price,
+		FlightNumber: flightNumber,
+		Price:        price,
 		Status:       StatusPaid,
-	}
-
-	err := u.Repo.CreateTicket(ctx, converter.TicketFromProtoToEntity(protoTicket))
+	})
 	if err != nil {
 		u.Logger.Err(err).Msg("Failed to create ticket")
-		return nil, err
+		return "", err
 	}
 
-	return &ticketpb.PurchaseTicketResponse{TicketUid: ticketUid}, nil
+	return ticketUid, nil
 }
 
 func (u *TicketUsecase) ReturnTicket(ctx context.Context,
-	req *ticketpb.ReturnTicketRequest) (*ticketpb.ReturnTicketResponse, error) {
+	username string, ticketUid string) error {
 	u.Logger.Info().Msg("Returning ticket...")
 
-	ticket, err := u.Repo.GetTicket(ctx, req.TicketUid)
+	ticket, err := u.Repo.GetTicket(ctx, username, ticketUid)
 	if err != nil {
 		u.Logger.Err(err).Msg("Failed to get ticket")
-		return nil, err
+		return err
 	}
 
 	ticket.Status = StatusCanceled
@@ -66,8 +82,8 @@ func (u *TicketUsecase) ReturnTicket(ctx context.Context,
 	err = u.Repo.UpdateTicket(ctx, ticket)
 	if err != nil {
 		u.Logger.Err(err).Msg("Failed to update ticket")
-		return nil, err
+		return err
 	}
 
-	return &ticketpb.ReturnTicketResponse{}, nil
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net"
@@ -11,7 +12,9 @@ import (
 
 	"github.com/deadshvt/flight-booking-system/config"
 	flightGrpc "github.com/deadshvt/flight-booking-system/flight-service/internal/delivery/grpc"
-	repo "github.com/deadshvt/flight-booking-system/flight-service/internal/repository/in_memory"
+	"github.com/deadshvt/flight-booking-system/flight-service/internal/repository"
+	"github.com/deadshvt/flight-booking-system/flight-service/internal/repository/cache"
+	"github.com/deadshvt/flight-booking-system/flight-service/internal/repository/database"
 	"github.com/deadshvt/flight-booking-system/flight-service/internal/usecase"
 	pb "github.com/deadshvt/flight-booking-system/flight-service/proto"
 	"github.com/deadshvt/flight-booking-system/logger"
@@ -32,25 +35,48 @@ func main() {
 
 	config.Load(".env")
 
+	lg.Info().Msg("Loaded .env file")
+
 	lis, err := net.Listen("tcp", ":"+os.Getenv("FLIGHT_PORT"))
 	if err != nil {
 		lg.Fatal().Msgf("Failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
-	flightRepo := repo.NewInMemoryFlightRepository()
+	ctx := context.Background()
+
+	// DB
+	flightDB, err := database.NewFlightDB(ctx, os.Getenv("FLIGHT_DB_TYPE"))
+	if err != nil {
+		lg.Fatal().Msgf("Failed to connect to database: %v", err)
+	}
+
+	// Cache
+	flightCache, err := cache.NewFlightCache(ctx, os.Getenv("FLIGHT_CACHE_TYPE"))
+	if err != nil {
+		lg.Fatal().Msgf("Failed to connect to cache: %v", err)
+	}
+
+	// Repository
+	flightRepoLogger := logger.NewLogger(baseLogger, "flight-service/repository")
+	flightRepo := repository.NewFlightRepository(flightDB, flightCache, flightRepoLogger)
+
+	// Usecase
 	flightUsecaseLogger := logger.NewLogger(baseLogger, "flight-service/usecase")
 	flightUsecase := usecase.NewFlightUsecase(flightRepo, flightUsecaseLogger)
+
+	// Server
 	flightServerLogger := logger.NewLogger(baseLogger, "flight-service/server")
 	flightServer := flightGrpc.NewFlightServiceServer(flightRepo, flightUsecase, flightServerLogger)
 
+	s := grpc.NewServer()
 	pb.RegisterFlightServiceServer(s, flightServer)
 	reflection.Register(s)
 
-	lg.Info().Msgf("Starting flight service on port :%s", os.Getenv("FLIGHT_PORT"))
+	lg.Info().Msgf("Starting flight service on port :%s...", os.Getenv("FLIGHT_PORT"))
 
 	go func() {
-		if err = s.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		err = s.Serve(lis)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			lg.Error().Msgf("Failed to start flight service: %v", err)
 		}
 	}()

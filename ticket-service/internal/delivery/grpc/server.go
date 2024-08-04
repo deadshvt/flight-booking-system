@@ -2,24 +2,28 @@ package grpc
 
 import (
 	"context"
+	"errors"
 
 	"github.com/deadshvt/flight-booking-system/logger"
 	"github.com/deadshvt/flight-booking-system/ticket-service/internal/converter"
 	"github.com/deadshvt/flight-booking-system/ticket-service/internal/repository"
 	"github.com/deadshvt/flight-booking-system/ticket-service/internal/usecase"
+	"github.com/deadshvt/flight-booking-system/ticket-service/pkg/errs"
 	pb "github.com/deadshvt/flight-booking-system/ticket-service/proto"
 
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type TicketServiceServer struct {
 	pb.UnimplementedTicketServiceServer
-	Repo    repository.TicketRepository
+	Repo    *repository.TicketRepository
 	Usecase *usecase.TicketUsecase
 	Logger  zerolog.Logger
 }
 
-func NewTicketServiceServer(repo repository.TicketRepository,
+func NewTicketServiceServer(repo *repository.TicketRepository,
 	usecase *usecase.TicketUsecase, logger zerolog.Logger) *TicketServiceServer {
 	return &TicketServiceServer{
 		Repo:    repo,
@@ -30,14 +34,16 @@ func NewTicketServiceServer(repo repository.TicketRepository,
 
 func (s *TicketServiceServer) GetTickets(ctx context.Context,
 	req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
+	username := req.GetUsername()
+
 	logger.LogWithParams(s.Logger, "Getting tickets...", struct {
 		Username string
-	}{req.Username})
+	}{username})
 
-	tickets, err := s.Repo.GetTickets(ctx, req.Username)
+	tickets, err := s.Repo.GetTickets(ctx, username)
 	if err != nil {
-		s.Logger.Err(err).Msg("Failed to get ticket")
-		return nil, err
+		s.Logger.Err(err).Msg("Failed to get tickets")
+		return nil, s.HandleError(err)
 	}
 
 	protoTickets := make([]*pb.Ticket, len(tickets))
@@ -48,22 +54,25 @@ func (s *TicketServiceServer) GetTickets(ctx context.Context,
 	logger.LogWithParams(s.Logger, "Got tickets", struct {
 		Username string
 		Count    int
-	}{req.Username, len(tickets)})
+	}{username, len(tickets)})
 
 	return &pb.GetTicketsResponse{Tickets: protoTickets}, nil
 }
 
 func (s *TicketServiceServer) GetTicket(ctx context.Context,
 	req *pb.GetTicketRequest) (*pb.GetTicketResponse, error) {
+	username := req.GetUsername()
+	ticketUid := req.GetTicketUid()
+
 	logger.LogWithParams(s.Logger, "Getting ticket...", struct {
 		Username  string
 		TicketUid string
-	}{req.Username, req.TicketUid})
+	}{username, ticketUid})
 
-	ticket, err := s.Repo.GetTicket(ctx, req.TicketUid)
+	ticket, err := s.Usecase.GetTicket(ctx, username, ticketUid)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to get ticket")
-		return nil, err
+		return nil, s.HandleError(err)
 	}
 
 	logger.LogWithParams(s.Logger, "Got ticket", struct {
@@ -80,43 +89,61 @@ func (s *TicketServiceServer) GetTicket(ctx context.Context,
 
 func (s *TicketServiceServer) PurchaseTicket(ctx context.Context,
 	req *pb.PurchaseTicketRequest) (*pb.PurchaseTicketResponse, error) {
+	username := req.GetUsername()
+	flightNumber := req.GetFlightNumber()
+	price := req.GetPrice()
+
 	logger.LogWithParams(s.Logger, "Purchasing ticket...", struct {
 		Username     string
 		FlightNumber string
-	}{req.Username, req.FlightNumber})
+	}{username, flightNumber})
 
-	protoTicket, err := s.Usecase.PurchaseTicket(ctx, req)
+	ticketUid, err := s.Usecase.PurchaseTicket(ctx, username, flightNumber, price)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to purchase ticket")
-		return nil, err
+		return nil, s.HandleError(err)
 	}
 
 	logger.LogWithParams(s.Logger, "Purchased ticket", struct {
 		Username     string
-		TicketUid    string
 		FlightNumber string
-	}{req.Username, protoTicket.TicketUid, req.FlightNumber})
+		TicketUid    string
+	}{username, flightNumber, ticketUid})
 
-	return protoTicket, nil
+	return &pb.PurchaseTicketResponse{}, nil
 }
 
 func (s *TicketServiceServer) ReturnTicket(ctx context.Context,
 	req *pb.ReturnTicketRequest) (*pb.ReturnTicketResponse, error) {
+	username := req.GetUsername()
+	ticketUid := req.GetTicketUid()
+
 	logger.LogWithParams(s.Logger, "Returning ticket...", struct {
 		Username  string
 		TicketUid string
-	}{req.Username, req.TicketUid})
+	}{username, ticketUid})
 
-	protoTicket, err := s.Usecase.ReturnTicket(ctx, req)
+	err := s.Usecase.ReturnTicket(ctx, username, ticketUid)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to return ticket")
-		return nil, err
+		return nil, s.HandleError(err)
 	}
 
 	logger.LogWithParams(s.Logger, "Returned ticket", struct {
 		Username  string
 		TicketUid string
-	}{req.Username, req.TicketUid})
+	}{username, ticketUid})
 
-	return protoTicket, nil
+	return &pb.ReturnTicketResponse{}, nil
+}
+
+func (s *TicketServiceServer) HandleError(err error) error {
+	switch {
+	case errors.Is(err, errs.ErrTicketsNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, errs.ErrTicketNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	default:
+		return status.Error(codes.Internal, err.Error())
+	}
 }

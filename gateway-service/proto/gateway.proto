@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package gateway;
+option go_package = "github.com/deadshvt/gateway-service/proto";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "flight-service/proto/flight.proto";
+import "bonus-service/proto/bonus.proto";
+
+service Gateway {
+  rpc GetFlightsWithAirports(flight.GetFlightsWithAirportsRequest) returns (flight.GetFlightsWithAirportsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/flights"
+    };
+  }
+
+  rpc GetPrivilegeWithHistory(bonus.GetPrivilegeWithHistoryRequest) returns (bonus.GetPrivilegeWithHistoryResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/privilege"
+    };
+  }
+
+  rpc GetMe(GetMeRequest) returns (GetMeResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/me"
+    };
+  }
+
+  rpc GetTicketsWithAirports(GetTicketsWithAirportsRequest) returns (GetTicketsWithAirportsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/tickets"
+    };
+  }
+
+  rpc GetTicketWithAirports(GetTicketWithAirportsRequest) returns (GetTicketWithAirportsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/tickets/{ticketUid}"
+    };
+  }
+
+  rpc PurchaseTicket(PurchaseTicketRequest) returns (PurchaseTicketResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/tickets"
+      body: "*"
+    };
+  }
+
+  rpc ReturnTicket(ReturnTicketRequest) returns (ReturnTicketResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/tickets/{ticketUid}"
+    };
+  }
+}
+
+message GetTicketsWithAirportsRequest {
+  string username = 1;
+}
+
+message GetTicketsWithAirportsResponse {
+  repeated TicketWithAirports tickets = 1;
+}
+
+message GetTicketWithAirportsRequest {
+  string username = 1;
+  string ticketUid = 2;
+}
+
+message GetTicketWithAirportsResponse {
+  TicketWithAirports ticket = 1;
+}
+
+message TicketWithAirports {
+  string ticketUid = 1;
+  string flightNumber = 2;
+  string fromAirport = 3;
+  string toAirport = 4;
+  google.protobuf.Timestamp date = 5;
+  int32 price = 6;
+  string status = 7;
+}
+
+message GetMeRequest {
+  string username = 1;
+}
+
+message GetMeResponse {
+  repeated TicketWithAirports tickets = 1;
+  PrivilegeShortInfo privilege = 2;
+}
+
+message PrivilegeShortInfo {
+  int32 balance = 1;
+  string status = 2;
+}
+
+message PurchaseTicketRequest {
+  string username = 1;
+  string flightNumber = 2;
+  int32 price = 3;
+  bool paidFromBalance = 4;
+}
+
+message PurchaseTicketResponse {
+  string ticketUid = 1;
+  string flightNumber = 2;
+  string fromAirport = 3;
+  string toAirport = 4;
+  google.protobuf.Timestamp date = 5;
+  int32 price = 6;
+  int32 paidByMoney = 7;
+  int32 paidByBonuses = 8;
+  string status = 9;
+  PrivilegeShortInfo privilege = 10;
+}
+
+message ReturnTicketRequest {
+  string username = 1;
+  string ticketUid = 2;
+}
+
+message ReturnTicketResponse {}

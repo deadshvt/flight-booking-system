@@ -10,7 +10,7 @@ proto-gateway: ## Generate gRPC and Go code from gateway proto files
 			--go_out=. --go_opt=paths=source_relative \
 			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 			--grpc-gateway_out=. --grpc-gateway_opt=generate_unbound_methods=true,paths=source_relative \
-			gateway/proto/gateway.proto
+			gateway-service/proto/gateway.proto
 .PHONY: proto-gateway
 
 proto-ticket: ## Generate gRPC and Go code from ticket proto files
@@ -37,12 +37,12 @@ proto-flight: ## Generate gRPC and Go code from flight proto files
 proto: proto-gateway proto-ticket proto-bonus proto-flight ## Generate gRPC and Go code from proto files
 .PHONY: proto
 
-clean:
+clean: ## Remove generated files
 	rm -rf gateway/proto/*.go ticket-service/proto/*.go bonus-service/proto/*.go flight-service/proto/*.go
 .PHONY: clean
 
 run-gateway: ## Run the gateway
-	go run gateway/cmd/gateway/main.go
+	go run gateway-service/cmd/gateway/main.go
 .PHONY: run-gateway
 
 run-ticket: ## Run the ticket service
@@ -56,3 +56,7 @@ run-bonus: ## Run the bonus service
 run-flight: ## Run the flight service
 	go run flight-service/cmd/flight-service/main.go
 .PHONY: run-flight
+
+lint: ### Run linting
+	golangci-lint run
+.PHONY: lint

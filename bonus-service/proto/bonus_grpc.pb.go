@@ -23,7 +23,7 @@ const (
 	BonusService_GetPrivilege_FullMethodName            = "/bonus.BonusService/GetPrivilege"
 	BonusService_CreatePrivilege_FullMethodName         = "/bonus.BonusService/CreatePrivilege"
 	BonusService_UpdatePrivilege_FullMethodName         = "/bonus.BonusService/UpdatePrivilege"
-	BonusService_CreateHistory_FullMethodName           = "/bonus.BonusService/CreateHistory"
+	BonusService_CreateOperation_FullMethodName         = "/bonus.BonusService/CreateOperation"
 )
 
 // BonusServiceClient is the client API for BonusService service.
@@ -34,7 +34,7 @@ type BonusServiceClient interface {
 	GetPrivilege(ctx context.Context, in *GetPrivilegeRequest, opts ...grpc.CallOption) (*GetPrivilegeResponse, error)
 	CreatePrivilege(ctx context.Context, in *CreatePrivilegeRequest, opts ...grpc.CallOption) (*CreatePrivilegeResponse, error)
 	UpdatePrivilege(ctx context.Context, in *UpdatePrivilegeRequest, opts ...grpc.CallOption) (*UpdatePrivilegeResponse, error)
-	CreateHistory(ctx context.Context, in *CreateHistoryRequest, opts ...grpc.CallOption) (*CreateHistoryResponse, error)
+	CreateOperation(ctx context.Context, in *CreateOperationRequest, opts ...grpc.CallOption) (*CreateOperationResponse, error)
 }
 
 type bonusServiceClient struct {
@@ -85,10 +85,10 @@ func (c *bonusServiceClient) UpdatePrivilege(ctx context.Context, in *UpdatePriv
 	return out, nil
 }
 
-func (c *bonusServiceClient) CreateHistory(ctx context.Context, in *CreateHistoryRequest, opts ...grpc.CallOption) (*CreateHistoryResponse, error) {
+func (c *bonusServiceClient) CreateOperation(ctx context.Context, in *CreateOperationRequest, opts ...grpc.CallOption) (*CreateOperationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateHistoryResponse)
-	err := c.cc.Invoke(ctx, BonusService_CreateHistory_FullMethodName, in, out, cOpts...)
+	out := new(CreateOperationResponse)
+	err := c.cc.Invoke(ctx, BonusService_CreateOperation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ type BonusServiceServer interface {
 	GetPrivilege(context.Context, *GetPrivilegeRequest) (*GetPrivilegeResponse, error)
 	CreatePrivilege(context.Context, *CreatePrivilegeRequest) (*CreatePrivilegeResponse, error)
 	UpdatePrivilege(context.Context, *UpdatePrivilegeRequest) (*UpdatePrivilegeResponse, error)
-	CreateHistory(context.Context, *CreateHistoryRequest) (*CreateHistoryResponse, error)
+	CreateOperation(context.Context, *CreateOperationRequest) (*CreateOperationResponse, error)
 	mustEmbedUnimplementedBonusServiceServer()
 }
 
@@ -123,8 +123,8 @@ func (UnimplementedBonusServiceServer) CreatePrivilege(context.Context, *CreateP
 func (UnimplementedBonusServiceServer) UpdatePrivilege(context.Context, *UpdatePrivilegeRequest) (*UpdatePrivilegeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePrivilege not implemented")
 }
-func (UnimplementedBonusServiceServer) CreateHistory(context.Context, *CreateHistoryRequest) (*CreateHistoryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateHistory not implemented")
+func (UnimplementedBonusServiceServer) CreateOperation(context.Context, *CreateOperationRequest) (*CreateOperationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOperation not implemented")
 }
 func (UnimplementedBonusServiceServer) mustEmbedUnimplementedBonusServiceServer() {}
 
@@ -211,20 +211,20 @@ func _BonusService_UpdatePrivilege_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BonusService_CreateHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateHistoryRequest)
+func _BonusService_CreateOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOperationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BonusServiceServer).CreateHistory(ctx, in)
+		return srv.(BonusServiceServer).CreateOperation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: BonusService_CreateHistory_FullMethodName,
+		FullMethod: BonusService_CreateOperation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BonusServiceServer).CreateHistory(ctx, req.(*CreateHistoryRequest))
+		return srv.(BonusServiceServer).CreateOperation(ctx, req.(*CreateOperationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -253,8 +253,8 @@ var BonusService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BonusService_UpdatePrivilege_Handler,
 		},
 		{
-			MethodName: "CreateHistory",
-			Handler:    _BonusService_CreateHistory_Handler,
+			MethodName: "CreateOperation",
+			Handler:    _BonusService_CreateOperation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

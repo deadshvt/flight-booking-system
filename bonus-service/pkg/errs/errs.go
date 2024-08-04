@@ -3,8 +3,13 @@ package errs
 import "errors"
 
 var (
-	ErrPrivilegeNotFound      = errors.New("privilege not found")
+	ErrPrivilegesNotFound = errors.New("privileges not found")
+	ErrPrivilegeNotFound  = errors.New("privilege not found")
+	ErrHistoryNotFound    = errors.New("history not found")
+
 	ErrPrivilegeAlreadyExists = errors.New("privilege already exists")
-	ErrHistoryNotFound        = errors.New("history not found")
-	ErrHistoryAlreadyExists   = errors.New("history already exists")
+	ErrOperationAlreadyExists = errors.New("operation already exists")
+
+	ErrUnsupportedDBType    = errors.New("unsupported db type")
+	ErrUnsupportedCacheType = errors.New("unsupported cache type")
 )

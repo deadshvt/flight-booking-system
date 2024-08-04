@@ -1,5 +1,7 @@
 package entity
 
+import "time"
+
 type Privilege struct {
 	ID       int32
 	Username string
@@ -7,16 +9,16 @@ type Privilege struct {
 	Balance  int32
 }
 
-type History struct {
+type Operation struct {
 	ID            int32
 	PrivilegeID   int32
 	TicketUid     string
-	Date          string
+	Date          time.Time
 	BalanceDiff   int32
 	OperationType string
 }
 
 type PrivilegeWithHistory struct {
-	Privilege Privilege
-	History   []*History
+	Privilege *Privilege
+	History   []*Operation
 }

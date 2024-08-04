@@ -2,10 +2,13 @@ package grpc
 
 import (
 	"context"
-	
+	"errors"
+	"time"
+
 	"github.com/deadshvt/flight-booking-system/bonus-service/internal/converter"
 	"github.com/deadshvt/flight-booking-system/bonus-service/internal/repository"
 	"github.com/deadshvt/flight-booking-system/bonus-service/internal/usecase"
+	"github.com/deadshvt/flight-booking-system/bonus-service/pkg/errs"
 	pb "github.com/deadshvt/flight-booking-system/bonus-service/proto"
 	"github.com/deadshvt/flight-booking-system/logger"
 
@@ -16,12 +19,12 @@ import (
 
 type BonusServiceServer struct {
 	pb.UnimplementedBonusServiceServer
-	Repo    repository.BonusRepository
+	Repo    *repository.BonusRepository
 	Usecase *usecase.BonusUsecase
 	Logger  zerolog.Logger
 }
 
-func NewBonusServiceServer(repo repository.BonusRepository,
+func NewBonusServiceServer(repo *repository.BonusRepository,
 	usecase *usecase.BonusUsecase, logger zerolog.Logger) *BonusServiceServer {
 	return &BonusServiceServer{
 		Repo:    repo,
@@ -32,47 +35,51 @@ func NewBonusServiceServer(repo repository.BonusRepository,
 
 func (s *BonusServiceServer) GetPrivilegeWithHistory(ctx context.Context,
 	req *pb.GetPrivilegeWithHistoryRequest) (*pb.GetPrivilegeWithHistoryResponse, error) {
-	logger.LogWithParams(s.Logger, "Getting privilege...", struct {
-		Username string
-	}{req.Username})
+	username := req.GetUsername()
 
-	privilege, err := s.Repo.GetPrivilegeWithHistory(ctx, req.Username)
+	logger.LogWithParams(s.Logger, "Getting privilege with history...", struct {
+		Username string
+	}{username})
+
+	privilegeWithHistory, err := s.Repo.GetPrivilegeWithHistory(ctx, username)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to get privilege with history")
-		return nil, status.Errorf(codes.Internal, "failed to get privilege with history: %v", err)
+		return nil, s.HandleError(err)
 	}
 
-	protoHistory := make([]*pb.History, len(privilege.History))
-	for i, history := range privilege.History {
-		protoHistory[i] = converter.HistoryFromEntityToProto(history)
+	protoHistory := make([]*pb.Operation, len(privilegeWithHistory.History))
+	for i, operation := range privilegeWithHistory.History {
+		protoHistory[i] = converter.OperationFromEntityToProto(operation)
 	}
 
-	entityPrivilege := privilege.Privilege
+	privilege := privilegeWithHistory.Privilege
 
 	logger.LogWithParams(s.Logger, "Got privilege with history", struct {
 		Username string
 		Status   string
 		Balance  int32
 		Count    int
-	}{entityPrivilege.Username, entityPrivilege.Status, entityPrivilege.Balance,
-		len(privilege.History)})
+	}{privilege.Username, privilege.Status, privilege.Balance,
+		len(privilegeWithHistory.History)})
 
 	return &pb.GetPrivilegeWithHistoryResponse{
-		Privilege: converter.PrivilegeFromEntityToProto(&entityPrivilege),
+		Privilege: converter.PrivilegeFromEntityToProto(privilege),
 		History:   protoHistory,
 	}, nil
 }
 
 func (s *BonusServiceServer) GetPrivilege(ctx context.Context,
 	req *pb.GetPrivilegeRequest) (*pb.GetPrivilegeResponse, error) {
+	username := req.GetUsername()
+
 	logger.LogWithParams(s.Logger, "Getting privilege...", struct {
 		Username string
-	}{req.Username})
+	}{username})
 
-	privilege, err := s.Repo.GetPrivilege(ctx, req.Username)
+	privilege, err := s.Repo.GetPrivilege(ctx, username)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to get privilege")
-		return nil, status.Errorf(codes.Internal, "failed to get privilege: %v", err)
+		return nil, s.HandleError(err)
 	}
 
 	logger.LogWithParams(s.Logger, "Got privilege", struct {
@@ -88,7 +95,7 @@ func (s *BonusServiceServer) GetPrivilege(ctx context.Context,
 
 func (s *BonusServiceServer) CreatePrivilege(ctx context.Context,
 	req *pb.CreatePrivilegeRequest) (*pb.CreatePrivilegeResponse, error) {
-	privilege := req.Privilege
+	privilege := converter.PrivilegeFromProtoToEntity(req.GetPrivilege())
 
 	logger.LogWithParams(s.Logger, "Creating privilege...", struct {
 		Username string
@@ -96,10 +103,10 @@ func (s *BonusServiceServer) CreatePrivilege(ctx context.Context,
 		Status   string
 	}{privilege.Username, privilege.Balance, privilege.Status})
 
-	err := s.Repo.CreatePrivilege(ctx, converter.PrivilegeFromProtoToEntity(privilege))
+	err := s.Repo.CreatePrivilege(ctx, privilege)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to create privilege")
-		return nil, status.Errorf(codes.Internal, "failed to create privilege: %v", err)
+		return nil, s.HandleError(err)
 	}
 
 	logger.LogWithParams(s.Logger, "Created privilege", struct {
@@ -113,7 +120,7 @@ func (s *BonusServiceServer) CreatePrivilege(ctx context.Context,
 
 func (s *BonusServiceServer) UpdatePrivilege(ctx context.Context,
 	req *pb.UpdatePrivilegeRequest) (*pb.UpdatePrivilegeResponse, error) {
-	privilege := req.Privilege
+	privilege := converter.PrivilegeFromProtoToEntity(req.GetPrivilege())
 
 	logger.LogWithParams(s.Logger, "Updating privilege...", struct {
 		Username string
@@ -121,10 +128,10 @@ func (s *BonusServiceServer) UpdatePrivilege(ctx context.Context,
 		Status   string
 	}{privilege.Username, privilege.Balance, privilege.Status})
 
-	err := s.Repo.UpdatePrivilege(ctx, converter.PrivilegeFromProtoToEntity(privilege))
+	err := s.Repo.UpdatePrivilege(ctx, privilege)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to update privilege")
-		return nil, status.Errorf(codes.Internal, "failed to update privilege: %v", err)
+		return nil, s.HandleError(err)
 	}
 
 	logger.LogWithParams(s.Logger, "Updated privilege", struct {
@@ -136,33 +143,46 @@ func (s *BonusServiceServer) UpdatePrivilege(ctx context.Context,
 	return &pb.UpdatePrivilegeResponse{}, nil
 }
 
-func (s *BonusServiceServer) CreateHistory(ctx context.Context,
-	req *pb.CreateHistoryRequest) (*pb.CreateHistoryResponse, error) {
-	history := req.History
+func (s *BonusServiceServer) CreateOperation(ctx context.Context,
+	req *pb.CreateOperationRequest) (*pb.CreateOperationResponse, error) {
+	operation := converter.OperationFromProtoToEntity(req.GetOperation())
 
 	logger.LogWithParams(s.Logger, "Creating history...", struct {
 		PrivilegeID   int32
 		TicketUid     string
-		Date          string
+		Date          time.Time
 		BalanceDiff   int32
 		OperationType string
-	}{history.PrivilegeID, history.TicketUid, history.Date,
-		history.BalanceDiff, history.OperationType})
+	}{operation.PrivilegeID, operation.TicketUid, operation.Date,
+		operation.BalanceDiff, operation.OperationType})
 
-	err := s.Repo.CreateHistory(ctx, converter.HistoryFromProtoToEntity(req.History))
+	err := s.Repo.CreateOperation(ctx, operation)
 	if err != nil {
 		s.Logger.Err(err).Msg("Failed to create history")
-		return nil, status.Errorf(codes.Internal, "failed to create history: %v", err)
+		return nil, s.HandleError(err)
 	}
 
 	logger.LogWithParams(s.Logger, "Created history", struct {
 		PrivilegeID   int32
 		TicketUid     string
-		Date          string
+		Date          time.Time
 		BalanceDiff   int32
 		OperationType string
-	}{history.PrivilegeID, history.TicketUid, history.Date,
-		history.BalanceDiff, history.OperationType})
+	}{operation.PrivilegeID, operation.TicketUid, operation.Date,
+		operation.BalanceDiff, operation.OperationType})
 
-	return &pb.CreateHistoryResponse{}, nil
+	return &pb.CreateOperationResponse{}, nil
+}
+
+func (s *BonusServiceServer) HandleError(err error) error {
+	switch {
+	case errors.Is(err, errs.ErrPrivilegeAlreadyExists):
+		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, errs.ErrPrivilegeNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, errs.ErrHistoryNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	default:
+		return status.Error(codes.Internal, err.Error())
+	}
 }

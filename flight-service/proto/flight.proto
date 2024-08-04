@@ -3,6 +3,8 @@ syntax = "proto3";
 package flight;
 option go_package = "github.com/deadshvt/flight-service/proto";
 
+import "google/protobuf/timestamp.proto";
+
 service FlightService {
   rpc GetFlightsWithAirports(GetFlightsWithAirportsRequest) returns (GetFlightsWithAirportsResponse);
   rpc GetFlightWithAirports(GetFlightWithAirportsRequest) returns (GetFlightWithAirportsResponse);
@@ -31,11 +33,12 @@ message GetFlightWithAirportsResponse {
 }
 
 message FlightWithAirports {
-  string flightNumber = 1;
-  string fromAirport = 2;
-  string toAirport = 3;
-  string date = 4;
-  int32 price = 5;
+  int32 ID = 1;
+  string flightNumber = 2;
+  string fromAirport = 3;
+  string toAirport = 4;
+  google.protobuf.Timestamp date = 5;
+  int32 price = 6;
 }
 
 message CreateFlightRequest {
@@ -49,7 +52,7 @@ message Flight {
   string flightNumber = 2;
   int32 fromAirportID = 3;
   int32 toAirportID = 4;
-  string date = 5;
+  google.protobuf.Timestamp date = 5;
   int32 price = 6;
 }
 

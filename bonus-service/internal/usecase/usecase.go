@@ -7,11 +7,11 @@ import (
 )
 
 type BonusUsecase struct {
-	Repo   repository.BonusRepository
+	Repo   *repository.BonusRepository
 	Logger zerolog.Logger
 }
 
-func NewBonusUsecase(repo repository.BonusRepository, logger zerolog.Logger) *BonusUsecase {
+func NewBonusUsecase(repo *repository.BonusRepository, logger zerolog.Logger) *BonusUsecase {
 	return &BonusUsecase{
 		Repo:   repo,
 		Logger: logger,
